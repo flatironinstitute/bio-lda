@@ -14,7 +14,7 @@ def eta(t):
     e_step -- learning rate at time t
     """
 
-    return 3e-5 #/ (t + 5)
+    return 3e-6 #/ (t + 5)
 
 def gamma(t):
     """
@@ -29,7 +29,7 @@ def gamma(t):
     g_step -- learning rate at time t
     """
 
-    return 3e-5 #/ (t + 10)
+    return 3e-6 #/ (t + 10)
 
 class Offline_LDA:
     """

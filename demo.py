@@ -7,7 +7,7 @@ from lda import *
 
 
 # Generate data and labels
-X, y = make_classification(n_samples=10000, n_features=500,class_sep=0.8, n_clusters_per_class=1, n_classes=2)
+X, y = make_classification(n_samples=10000, n_features=500,class_sep=10, n_clusters_per_class=1, n_classes=2)
 
 # Offline Version stats
 # Calculate means of each class and total covariance of both classes together
