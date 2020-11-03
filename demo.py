@@ -31,7 +31,7 @@ true_lda_score = max((np.sum(y_[y == 1] > 0) + np.sum(y_[y == 0] < 0)), (np.sum(
 # Initialize Online LDA Algorithm
 LDA = Online_LDA(1, 500)
 
-n_epoch = 25
+n_epoch = 50
 err = []
 
 # fit data using algorithm
