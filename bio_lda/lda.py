@@ -14,7 +14,7 @@ def eta(t):
     e_step -- learning rate at time t
     """
 
-    return 5e-6 #/ (t + 5)
+    return 5e-3
 
 def gamma(t):
     """
@@ -29,7 +29,7 @@ def gamma(t):
     g_step -- learning rate at time t
     """
 
-    return 5e-6 #/ (t + 10)
+    return 7e-3
 
 class Offline_LDA:
     """
@@ -55,8 +55,8 @@ class Offline_LDA:
         self.t = 0
         
         
-        self.w = np.random.normal(0, 1.0 / np.sqrt(D), size=(D, K))
-        self.l = np.random.normal(0, 1)
+        self.w = np.random.normal(0, 1.0 / np.sqrt(D), size=(D, K))#np.random.normal(0, 1.0 / D, size=(D, K))
+        self.l = np.random.normal(0, 1)#np.random.normal(0, 1.0/D)
         
         
         
