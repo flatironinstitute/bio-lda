@@ -48,16 +48,19 @@ def run_offline(X, y, mean1, mean2, cov, true_lda_score, eta, gamma, epochs=5000
     for n_e in tqdm(range(epochs)):
         LDA.fit(mean1, mean2, cov)
         Y = LDA.w.T.dot(X.T)
-        err.append(true_lda_score - max((np.sum(Y[:,y == 1] > 0) + np.sum(Y[:,y == 0] < 0)), (np.sum(Y[:,y == 0] > 0) + np.sum(Y[:,y == 1] < 0)) )/X.shape[0])
+        LDA.t += 1
+        err.append(true_lda_score - max((np.sum(Y[:,y == 1] > 1/2 * LDA.w.T@(mean1+mean2)) + np.sum(Y[:,y == 0] < 1/2 * LDA.w.T@(mean1+mean2))), (np.sum(Y[:,y == 0] > 1/2 * LDA.w.T@(mean1+mean2)) + np.sum(Y[:,y == 1] < 1/2 * LDA.w.T@(mean1+mean2))) )/X.shape[0])
         metric.append(((LDA.w.T@(mean1-mean2))**2/(LDA.w.T@cov@LDA.w)).item())
         optimal.append(
             ((optimal_W.T@(mean1-mean2))**2/(optimal_W.T@cov@optimal_W)).item() - 
             ((LDA.w.T@(mean1-mean2))**2/(LDA.w.T@cov@LDA.w)).item())
     return LDA, err, metric, optimal
 
-def run_online(X, y,  mean1, mean2, cov_tot,  true_lda_score, epochs=50):
+def run_online(X, y,  m1, m2, cov_tot, true_lda_score, eta, gamma, epochs=50):
     LDA = lda.Online_LDA(1, X.shape[1])
-
+    LDA.eta = eta
+    LDA.gamma = gamma
+    
     err = []
     metric = []
     optimal = []
@@ -72,11 +75,11 @@ def run_online(X, y,  mean1, mean2, cov_tot,  true_lda_score, epochs=50):
                 s = 1
             LDA.fit_next(x, r, s)
         Y = LDA.w.T.dot(X.T)
-        err.append(true_lda_score - max((np.sum(Y[y == 1] > 0) + np.sum(Y[y == 0] < 0)), (np.sum(Y[y == 0] > 0) + np.sum(Y[y == 1] < 0)) )/10000)
-        metric.append(((LDA.w.T@(mean1-mean2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
-        optimal_W = np.linalg.inv(cov_tot)@(mean1-mean2)
+        err.append(true_lda_score - max((np.sum(Y[y == 1] > 1/2 * LDA.w.T@(m1+m2)) + np.sum(Y[y == 0] < 1/2 * LDA.w.T@(m1+m2))), (np.sum(Y[y == 0] > 1/2 * LDA.w.T@(m1+m2)) + np.sum(Y[y == 1] < 1/2 * LDA.w.T@(m1+m2))) )/X.shape[0])
+        metric.append(((LDA.w.T@(m1-m2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
+        optimal_W = np.linalg.inv(cov_tot)@(m1-m2)
         optimal.append(
-            ((optimal_W.T@(mean1-mean2))**2/(optimal_W.T@cov_tot@optimal_W)).item() - 
-            ((LDA.w.T@(mean1-mean2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
+            ((optimal_W.T@(m1-m2))**2/(optimal_W.T@cov_tot@optimal_W)).item() - 
+            ((LDA.w.T@(m1-m2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
     return LDA, err, metric, optimal
 

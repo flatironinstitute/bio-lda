@@ -112,11 +112,14 @@ class Online_LDA:
         self.a = 1/2
         self.b = 1/2
         
-        self.w = np.random.normal(0, 1.0, size=(D,))
+        self.w = np.random.normal(0, 1.0/np.sqrt(D), size=(D,))
         self.l = np.random.normal(0, 1.0)
 
-        self.ybar = 0
-        self.xbar = 0
+        self.mu1 = 0
+        self.mu2 = 0
+        
+        self.v1 = 0
+        self.v2 = 0
         
         self.K = K
         self.D = D
@@ -128,37 +131,37 @@ class Online_LDA:
         
 
         t, tau, w, l = self.t, self.tau, self.w, self.l
-        ybar, xbar = self.ybar, self.xbar
+        mu1, mu2 = self.mu1, self.mu2
+        v1, v2 = self.v1, self.v2
         a, b = self.a, self.b
         
-        y = (w.T@x).item()
-        ybar = ybar + (1/t)*(y-ybar)
-        yhat = y - ybar
-        
-        xbar = xbar +(1/t)*(x-xbar)
-        a = a + (1/t)*(r-a)
-        b = b + (1/t)*(s-b)
-    
+        y = w.T@x
+        a = a + 1/t * (r - a)
+        b = b + 1/t * (s - b)
         
         r_a = r/a if a != 0 else 0
         s_b = s/b if b != 0 else 0
         
+        mu1 = mu1 + r_a*(x-mu1)/t
+        mu2 = mu2 + s_b*(x-mu2)/t
+        v1 = v1 + r_a*(y-v1)/t
+        v2 = v2 + s_b*(y-v2)/t
+        
         e_step = self.eta(t)
         g_step = self.gamma(t)
         
-    
-        w =  w + e_step*(r_a-s_b-l*yhat)*x + e_step*(l*yhat*xbar)
+        mu = r*mu1 + s*mu2
+        v = r*v1 + s*v2
+        w =  w + e_step*(r_a-s_b)*x + e_step*l*(y-v)*(x-mu)
+        l = l + g_step*((y-v)**2-1)
         
         
-        l = l + g_step*(yhat*yhat-1)
-        
-        
-        
-        self.ybar = ybar
-        self.xbar = xbar
         self.a = a
         self.b = b
+        self.mu1 = mu1
+        self.mu2 = mu2
+        self.v1 = v1
+        self.v2 = v2
         self.w = w
         self.l = l
-        self.t += 1
         
