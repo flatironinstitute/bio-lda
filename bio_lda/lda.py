@@ -125,7 +125,7 @@ class Online_LDA:
         self.D = D
         self.tau = tau
 
-    def fit_next(self, x, r, s):
+    def fit_next(self, x, r, s, m1, m2, SW):
 
         assert x.shape == (self.D,)
         

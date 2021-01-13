@@ -12,10 +12,12 @@ def calculate_covariance_matrix(X, Y=None):
 
     return np.array(covariance_matrix, dtype=float)
 
-def generate_dataset(samples=1000, d=50, proportions=[0.5,0.5], separation=0):
+def generate_dataset(samples=1000, d=50, proportions=[0.5,0.5], separation=0, l=0.5):
     mat = np.random.randn(d,d)
-    cov = mat@mat.T
-
+    A = mat@mat.T
+    I=np.eye(d)
+    cov = l * A + (1-l) * I
+    #cov += 0.1 * np.random.randn(d,d)
     mean1 = np.random.randn(d)
     mean2 = np.random.randn(d) + separation
     X1 = np.random.multivariate_normal(mean1, cov, int(proportions[0] * samples))
@@ -73,7 +75,7 @@ def run_online(X, y,  m1, m2, cov_tot, true_lda_score, eta, gamma, epochs=50):
             else:
                 r = 0
                 s = 1
-            LDA.fit_next(x, r, s)
+            LDA.fit_next(x, r, s, m1, m2, cov_tot)
         Y = LDA.w.T.dot(X.T)
         err.append(true_lda_score - max((np.sum(Y[y == 1] > 1/2 * LDA.w.T@(m1+m2)) + np.sum(Y[y == 0] < 1/2 * LDA.w.T@(m1+m2))), (np.sum(Y[y == 0] > 1/2 * LDA.w.T@(m1+m2)) + np.sum(Y[y == 1] < 1/2 * LDA.w.T@(m1+m2))) )/X.shape[0])
         metric.append(((LDA.w.T@(m1-m2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
