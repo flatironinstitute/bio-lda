@@ -62,9 +62,10 @@ def run_offline(X, y, mean1, mean2, cov, true_lda_score, eta, gamma, epochs=5000
     return LDA, err, metric, optimal
 
 
-def run_online(X, y,  m1, m2, cov_tot, true_lda_score, epochs=50):
+def run_online(X, y,  m1, m2, cov_tot, true_lda_score, eta, gamma, epochs=50):
     LDA = lda.Online_LDA(1, X.shape[1])
-    
+    LDA.eta = eta
+    LDA.gamma = gamma
     err = []
     metric = []
     optimal = []
