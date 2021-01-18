@@ -1,6 +1,40 @@
 import numpy as np
+from numba import int32, float32, float64, jit    # import the types
+from numba.experimental import jitclass
+import numba
+
+spec = [
+    ("t", int32), 
+    ("a", float64), 
+    ("b", float64),
+    ("mu1", numba.float64[:]),
+    ("mu2", numba.float64[:]),
+    ("v1", float64),
+    ("v2", float64),
+    ("w", numba.float64[:]),
+    ("l", float64),
+    ("K", int32),
+    ("D", int32),
+    ("tau", int32),
+    ("eta", float64),
+    ("gamma", float64),
+    ("mu", numba.float64[:])
+    
+]
+
+offline_spec = [
+    ("t", numba.int32),
+    ("w", numba.float64[:,:]),
+    ("l", float64),
+    ("K", int32),
+    ("D", int32),
+    ("tau", int32),
+    ("eta", float64),
+    ("gamma", float64)
+]
 
 
+@jit(nopython=True)
 def eta(t):
     """
     Learning rate for w
@@ -13,9 +47,13 @@ def eta(t):
     ====================
     e_step -- learning rate at time t
     """
+    if t < 2000:
+        return 1e-8
+    elif t < 4000:
+        return 1e-10
+    return 1e-8
 
-    return 5e-3
-
+@jit(nopython=True)
 def gamma(t):
     """
     Learning rate for lambda
@@ -28,9 +66,13 @@ def gamma(t):
     ====================
     g_step -- learning rate at time t
     """
+    if t < 2000:
+        return 1e-8
+    elif t < 4000:
+        return 1e-10
+    return 1e-8
 
-    return 7e-3
-
+#@jitclass(offline_spec)
 class Offline_LDA:
     """
     Parameters:
@@ -48,17 +90,15 @@ class Offline_LDA:
 
     def __init__(self, K, D, tau=0.5):
 
-        
-
         self.eta = eta
         self.gamma = gamma
+        
         self.t = 0
         
         
-        self.w = np.random.normal(0, 1.0 / np.sqrt(D), size=(D, K))#np.random.normal(0, 1.0 / D, size=(D, K))
-        self.l = np.random.normal(0, 1)#np.random.normal(0, 1.0/D)
-        
-        
+        self.w = np.random.normal(0, 1.0 / np.sqrt(D), size=(D, K))
+        self.l = np.random.normal(0, 1)
+
         
         self.K = K
         self.D = D
@@ -67,25 +107,19 @@ class Offline_LDA:
     def fit(self, mu1, mu2, SW):
 
         t, tau, w, l, K = self.t, self.tau, self.w, self.l, self.K
-
-        if len(mu1.shape) != 2:
-            mu1 = np.expand_dims(mu1, axis=-1)
-        if len(mu2.shape) != 2:
-            mu2 = np.expand_dims(mu2, axis=-1)
-        
-        assert mu1.shape[1] == 1
-        assert mu2.shape[1] == 1
+            
         
         e_step = self.eta(t)
         g_step = self.gamma(t)
         w = w + e_step * (mu1 - mu2 - l * (SW@w))
         l = l + g_step * (w.T@SW@w -1)
+        l = l.item()
         
         self.w = w
         self.l = l
         self.t += 1
         
-        
+@jitclass(spec)
 class Online_LDA:
     """
     Parameters:
@@ -102,11 +136,7 @@ class Online_LDA:
     """
 
     def __init__(self, K, D, tau=0.5):
-
         
-
-        self.eta = eta
-        self.gamma = gamma
         self.t = 1
         
         self.a = 1/2
@@ -115,16 +145,16 @@ class Online_LDA:
         self.w = np.random.normal(0, 1.0/np.sqrt(D), size=(D,))
         self.l = np.random.normal(0, 1.0)
 
-        self.mu1 = 0
-        self.mu2 = 0
+        self.mu1 = np.array([0.0])
+        self.mu2 = np.array([0.0])
         
-        self.v1 = 0
-        self.v2 = 0
+        self.v1 = 0.0
+        self.v2 = 0.0
         
         self.K = K
         self.D = D
         self.tau = tau
-
+        
     def fit_next(self, x, r, s, m1, m2, SW):
 
         assert x.shape == (self.D,)
@@ -142,24 +172,24 @@ class Online_LDA:
         r_a = r/a if a != 0 else 0
         s_b = s/b if b != 0 else 0
         
-        mu1 = mu1 + r_a*(x-mu1)/t
-        mu2 = mu2 + s_b*(x-mu2)/t
-        v1 = v1 + r_a*(y-v1)/t
-        v2 = v2 + s_b*(y-v2)/t
+        mu1 = mu1 + (r_a*x-mu1)/t
+        mu2 = mu2 + (s_b*x-mu2)/t
+        v1 = v1 + (r_a*y-v1)/t
+        v2 = v2 + (s_b*y-v2)/t
         
-        e_step = self.eta(t)
-        g_step = self.gamma(t)
+        e_step = eta(t)
+        g_step = gamma(t)
         
         mu = r*mu1 + s*mu2
         v = r*v1 + s*v2
         w =  w + e_step*(r_a-s_b)*x + e_step*l*(y-v)*(x-mu)
         l = l + g_step*((y-v)**2-1)
         
-        
         self.a = a
         self.b = b
         self.mu1 = mu1
         self.mu2 = mu2
+        self.mu = mu
         self.v1 = v1
         self.v2 = v2
         self.w = w
