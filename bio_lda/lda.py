@@ -47,11 +47,7 @@ def eta(t):
     ====================
     e_step -- learning rate at time t
     """
-    if t < 2000:
-        return 1e-8
-    elif t < 4000:
-        return 1e-10
-    return 1e-8
+    return 5e-8
 
 @jit(nopython=True)
 def gamma(t):
@@ -66,11 +62,7 @@ def gamma(t):
     ====================
     g_step -- learning rate at time t
     """
-    if t < 2000:
-        return 1e-8
-    elif t < 4000:
-        return 1e-10
-    return 1e-8
+    return 5e-8
 
 #@jitclass(offline_spec)
 class Offline_LDA:
@@ -139,6 +131,9 @@ class Online_LDA:
         
         self.t = 1
         
+        self.eta =  5e-8
+        self.gamma =  5e-8
+        
         self.a = 1/2
         self.b = 1/2
         
@@ -177,8 +172,8 @@ class Online_LDA:
         v1 = v1 + (r_a*y-v1)/t
         v2 = v2 + (s_b*y-v2)/t
         
-        e_step = eta(t)
-        g_step = gamma(t)
+        e_step = self.eta
+        g_step = self.gamma
         
         mu = r*mu1 + s*mu2
         v = r*v1 + s*v2
