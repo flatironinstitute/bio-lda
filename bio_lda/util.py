@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 import bio_lda.lda as lda
 from tqdm import tqdm
+import numba
 
 def calculate_covariance_matrix(X, Y=None):
     """ Calculate the covariance matrix for the dataset X """
@@ -42,6 +43,8 @@ def run_offline(X, y, mean1, mean2, cov, true_lda_score, eta, gamma, epochs=5000
     LDA = lda.Offline_LDA(1, X.shape[1])
     LDA.eta = eta
     LDA.gamma = gamma
+    mean1 = np.expand_dims(mean1, axis=-1)
+    mean2 = np.expand_dims(mean2, axis=-1)
     #LDA.w = np.expand_dims(np.linalg.inv(cov)@(mean1-mean2), axis=-1)
     err = []
     metric = []
@@ -58,14 +61,14 @@ def run_offline(X, y, mean1, mean2, cov, true_lda_score, eta, gamma, epochs=5000
             ((LDA.w.T@(mean1-mean2))**2/(LDA.w.T@cov@LDA.w)).item())
     return LDA, err, metric, optimal
 
-def run_online(X, y,  m1, m2, cov_tot, true_lda_score, eta, gamma, epochs=50):
+
+def run_online(X, y,  m1, m2, cov_tot, true_lda_score, epochs=50):
     LDA = lda.Online_LDA(1, X.shape[1])
-    LDA.eta = eta
-    LDA.gamma = gamma
     
     err = []
     metric = []
     optimal = []
+    mu_d = []
 
     for n_e in tqdm(range(epochs)):
         for count, x in enumerate(X):
@@ -76,6 +79,7 @@ def run_online(X, y,  m1, m2, cov_tot, true_lda_score, eta, gamma, epochs=50):
                 r = 0
                 s = 1
             LDA.fit_next(x, r, s, m1, m2, cov_tot)
+        LDA.t += 1
         Y = LDA.w.T.dot(X.T)
         err.append(true_lda_score - max((np.sum(Y[y == 1] > 1/2 * LDA.w.T@(m1+m2)) + np.sum(Y[y == 0] < 1/2 * LDA.w.T@(m1+m2))), (np.sum(Y[y == 0] > 1/2 * LDA.w.T@(m1+m2)) + np.sum(Y[y == 1] < 1/2 * LDA.w.T@(m1+m2))) )/X.shape[0])
         metric.append(((LDA.w.T@(m1-m2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
@@ -83,5 +87,11 @@ def run_online(X, y,  m1, m2, cov_tot, true_lda_score, eta, gamma, epochs=50):
         optimal.append(
             ((optimal_W.T@(m1-m2))**2/(optimal_W.T@cov_tot@optimal_W)).item() - 
             ((LDA.w.T@(m1-m2))**2/(LDA.w.T@cov_tot@LDA.w)).item())
-    return LDA, err, metric, optimal
+        mu_d.append(m1-LDA.mu1)
+    s = []
+    for count, x in enumerate(X):
+        if y[count] == 0:
+            s.append((x - m1).reshape(-1,1)@(x-m1).reshape(-1,1).T)
+            
+    return LDA, err, metric, optimal, np.array(s), mu_d
 
